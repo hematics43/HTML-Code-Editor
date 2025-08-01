@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🖊️ HTML Code Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --fg: #ffffff;
+      --accent: #4fc3f7;
+      --tab-bg: #2e2e2e;
+      --tab-active: #4fc3f7;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background: #111;
+      padding: 10px;
+      font-size: 1.2em;
+      text-align: center;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px;
+      background: #111;
+    }
+
+    .controls button, .controls label {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 8px 12px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: 0.2s;
+    }
+
+    .controls button:hover {
+      background: #81d4fa;
+    }
+
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+      background: var(--tab-bg);
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      padding: 8px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      background: var(--tab-bg);
+      border-right: 1px solid #444;
+    }
+
+    .tab.active {
+      background: var(--tab-active);
+      color: #000;
+      font-weight: bold;
+    }
+
+    .filename {
+      padding: 5px 10px;
+      font-size: 0.9em;
+      background: #00000088;
+    }
+
+    #editor {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      padding: 10px;
+      font-size: 16px;
+      background: #121212;
+      color: #eee;
+      border: none;
+      outline: none;
+      font-family: monospace;
+      box-sizing: border-box;
+    }
+
+    #preview {
+      flex: 1;
+      border: none;
+      width: 100%;
+    }
+
+    #dropzone {
+      text-align: center;
+      border: 2px dashed var(--accent);
+      margin: 5px;
+      padding: 10px;
+      border-radius: 8px;
+      color: #aaa;
+    }
+
+    #fullscreenView {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+    }
+
+    #fullscreenView iframe {
+      flex: 1;
+      border: none;
+    }
+
+    #exitFullscreen {
+      position: absolute;
+      top: 5px; right: 10px;
+      background: red;
+      color: white;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      #editor {
+        font-size: 14px;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>🖊️ HTML Code Editor, Codes Never Expire</header>
+
+  <div class="controls">
+    <label>
+      ⬆ Import <input type="file" id="importFile" accept=".html" multiple hidden>
+    <button onclick="saveAll()">💾 Save</button>
+    <button onclick="clearCurrent()">🧹 Clear</button>
+    <button onclick="exportFile()">📤 Export</button>
+    <button onclick="toggleFullscreen()">🖥️ Fullscreen Preview</button>
+    </label>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="filename" id="filename">No File Loaded</div>
+
+  <textarea id="editor" placeholder="Start typing HTML code..."></textarea>
+  <div id="dropzone">📂 Drag & Drop .html files here to insert</div>
+  <iframe id="preview"></iframe>
+
+  <div id="fullscreenView">
+    <div id="exitFullscreen" onclick="toggleFullscreen()">✖ Exit Fullscreen</div>
+    <iframe></iframe>
+  </div>
+
+  <script>
+    let files = {};
+    let currentFile = 'untitled.html';
+
+    const editor = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+    const filenameEl = document.getElementById('filename');
+    const tabs = document.getElementById('tabs');
+
+    function updatePreview() {
+      preview.srcdoc = editor.value;
+      if (document.querySelector('#fullscreenView').style.display === 'flex') {
+        document.querySelector('#fullscreenView iframe').srcdoc = editor.value;
+      }
+      files[currentFile] = editor.value;
+    }
+
+    function switchTab(name) {
+      if (!files[name]) return;
+      files[currentFile] = editor.value;
+      currentFile = name;
+      editor.value = files[name];
+      filenameEl.textContent = name;
+      updatePreview();
+      renderTabs();
+    }
+
+    function renderTabs() {
+      tabs.innerHTML = '';
+      for (const name in files) {
+        const tab = document.createElement('div');
+        tab.textContent = name;
+        tab.className = 'tab' + (name === currentFile ? ' active' : '');
+        tab.onclick = () => switchTab(name);
+        tabs.appendChild(tab);
+      }
+    }
+
+    editor.addEventListener('input', updatePreview);
+
+    function saveAll() {
+      localStorage.setItem('html_files', JSON.stringify(files));
+      alert('All files saved!');
+    }
+
+    function loadAll() {
+      const data = localStorage.getItem('html_files');
+      if (data) {
+        files = JSON.parse(data);
+        currentFile = Object.keys(files)[0];
+        editor.value = files[currentFile];
+        filenameEl.textContent = currentFile;
+        updatePreview();
+        renderTabs();
+      } else {
+        files = { 'untitled.html': '' };
+        currentFile = 'untitled.html';
+        editor.value = '';
+        filenameEl.textContent = currentFile;
+        updatePreview();
+        renderTabs();
+      }
+    }
+
+    function clearCurrent() {
+      if (confirm("Clear content of current file?")) {
+        editor.value = '';
+        updatePreview();
+      }
+    }
+
+    function exportFile() {
+      const blob = new Blob([editor.value], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = currentFile || 'download.html';
+      a.click();
+    }
+
+    document.getElementById('importFile').addEventListener('change', e => {
+      for (const file of e.target.files) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (!files[file.name]) {
+            files[file.name] = '';
+          }
+          files[file.name] += `\n<!-- ${file.name} -->\n` + reader.result;
+          currentFile = file.name;
+          editor.value = files[currentFile];
+          filenameEl.textContent = currentFile;
+          updatePreview();
+          renderTabs();
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    document.getElementById('dropzone').addEventListener('dragover', e => {
+      e.preventDefault();
+      e.target.style.background = '#333';
+    });
+
+    document.getElementById('dropzone').addEventListener('dragleave', e => {
+      e.target.style.background = '';
+    });
+
+    document.getElementById('dropzone').addEventListener('drop', e => {
+      e.preventDefault();
+      e.target.style.background = '';
+      for (const file of e.dataTransfer.files) {
+        if (file.name.endsWith('.html')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (!files[file.name]) {
+              files[file.name] = '';
+            }
+            files[file.name] += `\n<!-- ${file.name} -->\n` + reader.result;
+            currentFile = file.name;
+            editor.value = files[currentFile];
+            filenameEl.textContent = currentFile;
+            updatePreview();
+            renderTabs();
+          };
+          reader.readAsText(file);
+        }
+      }
+    });
+
+    function toggleFullscreen() {
+      const fs = document.getElementById('fullscreenView');
+      const isActive = fs.style.display === 'flex';
+      fs.style.display = isActive ? 'none' : 'flex';
+      if (!isActive) {
+        fs.querySelector('iframe').srcdoc = editor.value;
+      }
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>
