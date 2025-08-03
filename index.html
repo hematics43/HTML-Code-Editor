@@ -123,6 +123,7 @@
       padding: 10px;
       border-radius: 8px;
       color: #aaa;
+      transition: background 0.3s, color 0.3s;
     }
 
     #fullscreenView {
@@ -170,15 +171,17 @@
 <body>
   <header>
     <div class="logo">🖊️ <span>Advanced HTML Code Editor</span></div>
-    <div class="sub">✨ Live Preview • 📤 Import/Export • 📱 Mobile-Friendly</div>
+    <div class="sub">✨ Live Preview • 📤 Import/Export • 📋 Paste • 📂 Drag & Drop</div>
   </header>
 
   <div class="controls">
     <label>
       ⬆ Import <input type="file" id="importFile" accept=".html" multiple hidden>
+    </label>
+    <button onclick="pasteClipboard()">📋 Paste</button>
     <button onclick="clearCurrent()">🧹 Clear</button>
     <button onclick="exportFile()">📤 Export</button>
-    <button onclick="toggleFullscreen()">🖥️ Fullscreen</button></label>
+    <button onclick="toggleFullscreen()">🖥️ Fullscreen</button>
   </div>
 
   <div class="tabs" id="tabs"></div>
@@ -250,45 +253,6 @@
       }
     }
 
-    function newTab() {
-  let name;
-  do {
-    name = `new${newTabCounter++}.html`;
-  } while (files[name]);
-
-  files[name] = '';
-  currentFile = name;
-  cm.setValue('');
-  filenameEl.textContent = name;
-  renderTabs();
-  updatePreview();
-}
-
-
-    function saveAll() {
-      localStorage.setItem('html_files', JSON.stringify(files));
-      alert('All files saved!');
-    }
-
-    function loadAll() {
-      const data = localStorage.getItem('html_files');
-      if (data) {
-        files = JSON.parse(data);
-        currentFile = Object.keys(files)[0];
-        cm.setValue(files[currentFile]);
-        filenameEl.textContent = currentFile;
-        updatePreview();
-        renderTabs();
-      } else {
-        files = { 'untitled.html': '' };
-        currentFile = 'untitled.html';
-        cm.setValue('');
-        filenameEl.textContent = currentFile;
-        renderTabs();
-        updatePreview();
-      }
-    }
-
     function clearCurrent() {
       if (confirm("Clear content of current file?")) {
         cm.setValue('');
@@ -302,6 +266,28 @@
       a.href = URL.createObjectURL(blob);
       a.download = currentFile || 'download.html';
       a.click();
+    }
+
+    function toggleFullscreen() {
+      const fs = document.getElementById('fullscreenView');
+      fs.style.display = fs.style.display === 'flex' ? 'none' : 'flex';
+      if (fs.style.display === 'flex') {
+        fs.querySelector('iframe').srcdoc = cm.getValue();
+      }
+    }
+
+    function pasteClipboard() {
+      navigator.clipboard.readText().then(text => {
+        if (text) {
+          cm.replaceSelection(text);
+          updatePreview();
+        } else {
+          alert("Clipboard is empty or inaccessible.");
+        }
+      }).catch(err => {
+        alert("Clipboard access failed.");
+        console.error(err);
+      });
     }
 
     document.getElementById('importFile').addEventListener('change', e => {
@@ -320,24 +306,30 @@
       }
     });
 
-    document.getElementById('dropzone').addEventListener('dragover', e => {
+    const dropzone = document.getElementById('dropzone');
+
+    dropzone.addEventListener('dragover', e => {
       e.preventDefault();
-      e.target.style.background = '#333';
+      dropzone.style.background = '#333';
+      dropzone.style.color = '#4fc3f7';
     });
 
-    document.getElementById('dropzone').addEventListener('dragleave', e => {
-      e.target.style.background = '';
+    dropzone.addEventListener('dragleave', e => {
+      e.preventDefault();
+      dropzone.style.background = '';
+      dropzone.style.color = '#aaa';
     });
 
-    document.getElementById('dropzone').addEventListener('drop', e => {
+    dropzone.addEventListener('drop', e => {
       e.preventDefault();
-      e.target.style.background = '';
+      dropzone.style.background = '';
+      dropzone.style.color = '#aaa';
       for (const file of e.dataTransfer.files) {
-        if (file.name.endsWith('.html')) {
+        if (file.type === "text/html" || file.name.endsWith('.html')) {
           const reader = new FileReader();
           reader.onload = () => {
             if (!files[file.name]) files[file.name] = '';
-            files[file.name] += `\n<!-- ${file.name} -->\n` + reader.result;
+            files[file.name] += `\n<!-- Dropped: ${file.name} -->\n` + reader.result;
             currentFile = file.name;
             cm.setValue(files[currentFile]);
             filenameEl.textContent = currentFile;
@@ -345,19 +337,18 @@
             updatePreview();
           };
           reader.readAsText(file);
+        } else {
+          alert(`❌ "${file.name}" is not a valid .html file.`);
         }
       }
     });
 
-    function toggleFullscreen() {
-      const fs = document.getElementById('fullscreenView');
-      fs.style.display = fs.style.display === 'flex' ? 'none' : 'flex';
-      if (fs.style.display === 'flex') {
-        fs.querySelector('iframe').srcdoc = cm.getValue();
-      }
-    }
-
-    loadAll();
+    // Load initial tab
+    files[currentFile] = '';
+    cm.setValue('');
+    filenameEl.textContent = currentFile;
+    renderTabs();
+    updatePreview();
   </script>
 </body>
 </html>
