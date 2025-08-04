@@ -10,6 +10,23 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.css" />
 
   <style>
+    #jumpButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      font-size: 16px;
+    }
+
+    #jumpButton:hover {
+      background-color: #45a049;
+    }
     :root {
       --bg: #1e1e1e;
       --fg: #ffffff;
@@ -350,5 +367,8 @@
     renderTabs();
     updatePreview();
   </script>
+  <button id="jumpButton" onclick="window.location.href='https://hematics43.github.io/HTML-Live-Editor-2.0/'">
+     Launch HTML Live Editor 2.0
+  </button>
 </body>
 </html>
